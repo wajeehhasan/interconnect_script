@@ -1,17 +1,21 @@
+#used to send get and post requests
 import requests
+#data dump navigator
 from bs4 import BeautifulSoup
 #for simple mail use this lib
 import smtplib
+#regex expresion filter like dial-plan but used for strings
 import re
 #to attach body to msg
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText 
 #to attach images and text files use these libs
 from email.mime.base import MIMEBase
+#to use default encoding as accepted by e-mail servers
 from email import encoders
-
+#===========================account settings================
 email_sender="ngnnoc321@gmail.com"
-email_reciever="s.wajeeh@cyber.net.pk"
+email_reciever="khushbakht@cyber.net.pk"
 t_subject="Interconnect Status Report"
 t_Cc="s.wajeeh@cyber.net.pk"
 msg=MIMEMultipart()
@@ -20,12 +24,13 @@ msg['From']=email_sender
 msg['To']=email_reciever
 msg['Cc']="s.wajeeh@cyber.net.pk"
 server = smtplib.SMTP("smtp.gmail.com",587)
-
+#====================color codes extracted from html for apply logic=====================
 
 blue='background-color:#2B60DE'
 red='background-color:#E42217'
 hang='background-color:#95B9C7'
 in_use='background-color:#348017'
+#============================request session initiation================
 s=requests.session()
 response = s.get("http://10.24.242.6/index.php")
 
@@ -35,12 +40,14 @@ auth = {
 }
 s.post('http://10.24.242.6/index.php',data=auth)
 response = s.get('http://10.24.242.6/fusionpbx/tdm_status.php?embedded=NSC')
+
+# ============sending response to beautiful soup to navigate through===========
 soup=BeautifulSoup(response.text,"html.parser")
   
 ## errors on e1 retrieved
 raw_data_int=soup.find_all("span")
 
-#========================ERRORSR=======
+#========================regex for string(to filer required info)=======
 LCV= re.compile(r'(\w{4} \w{4} \w{9})\s:\s(\d{1,})')
 feb= re.compile(r'(\w{3} \w{3} \w{5} \w{6}\s):\s(\d{0,})')
 CRC4= re.compile(r'(\w{3}\d{1} \w{6})\s\s: (\d{0,})')
@@ -48,6 +55,7 @@ FAS= re.compile(r'(F\w{2} \w{6})\s\s:\s(\d{1,})')
 Sync1= re.compile(r'(S\w{3} \w{6})\s\s: (\d{1,})')
 Rx = re.compile(r'(\w{2} \w{5})\s:\s&\w{2};\s(-?\d{1,}.?\d{1,}?\w{2})')
 status1= re.compile(r'(<font color="white">)(\w{1,})')
+# =======from here till line 188 is just implementation of logic=======
 LCV_v=""
 feb_v=""
 crc4_v=""
@@ -102,9 +110,10 @@ for x in raw_data_int:
         master_list.append(master_string)
     else:
         pass
+#============================file saving to save error report
 with open("interconnect_data.txt","w") as file:
     for count,elem in enumerate(master_list,1):
-        spasd='============E#{} Details============\n'.format(count)
+        spasd='============E1/T1#{} Details============\n'.format(count)
         file.write(spasd)
         file.write(elem)
         file.write("\n")
@@ -113,7 +122,7 @@ with open("interconnect_data.txt","w") as file:
 
 
 
-# for channel counts
+# for channel count
 red_list=[]
 inuse_list=[]
 hang_list=[]
@@ -146,28 +155,62 @@ for x in raw_data_int:
     else:
         pass
 
+
+
+#===========================navigatig to data========================
+soup=BeautifulSoup(response.text,"html.parser")
+# print(soup)
+data_network_status=soup.find_all(attrs={'color':'white'})
+dt_nt_list=[]
+for x in data_network_status:
+    if x.get_text()=='i          ' or x.get_text()=='s          ' or x.get_text()=='u          ' or x.get_text()=='S          ' or len(x.get_text())==1:
+        pass
+    else:
+        dt_nt_list.append(x.get_text())
+
+stp_1="Physical : {}, Data layer : {}, Network Layer : {}".format(dt_nt_list[8],dt_nt_list[9],dt_nt_list[10])
+stp_2="Physical : {}, Data layer : {}, Network Layer : {}".format(dt_nt_list[12],dt_nt_list[13],dt_nt_list[14])
+
+# =================================================
 message2=""
 for count,elem in enumerate(e1_status,1):
-    message2+="============= E1#{} ================\n".format(count)
-    message2+="\t\tstatus : {}".format(e1_status[count-1])
-    message2+="\n"
+    if count==3:
+        message2+="============= E1#{} ================\n".format(count)
+        message2+=stp_1
+        message2+='\n'
+    elif count==4:
+        message2+="============= E1#{} ================\n".format(count)
+        message2+=stp_2
+        message2+='\n'
+    else:
+        message2+="============= E1#{} ================\n".format(count)
+        message2+="\t\tstatus : {}".format(e1_status[count-1])
+        message2+="\n"
+#===starting secure connection by tls encrypter==
 server.starttls()
 server.login("ngnnoc321@gmail.com","Cyber@321")
 message="\nLahore Interconnect status(10.24.242.6)\n\tUp(idle) channels : {}\n\tinuse channels : {}\n\thang channels : {}\n\tdown channels : {}\n\t".format(len(blue_list),len(inuse_list),len(hang_list),len(red_list))
 message2+=message
 
 
-
+#=====converting dictionary data type to plain text===
 msg.attach(MIMEText(message2,'plain'))
 final_body=msg.as_string()
+#===giving file patch to be attached
 filename="interconnect_data.txt"
+#===opening file and reading byte by byte
 attachment=open(filename,'rb')
+#===converting byte's into octet stream===
 part=MIMEBase('application','octet-stream')
+#=======those stream of octet into payload====
 part.set_payload((attachment).read())
+#===email server accept data encoded with base64 default==
 encoders.encode_base64(part)
 part.add_header('Content-Disposition',"attachment; filename= "+filename)
+#====attaching txt file to actual mesage
 msg.attach(part)
+#==converting msg into string form
 final_body=msg.as_string()
-
+#sending email and close connection
 server.sendmail(email_sender,email_reciever,final_body)
 server.quit()
