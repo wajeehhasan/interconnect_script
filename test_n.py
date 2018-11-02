@@ -19,7 +19,8 @@ email_sender="ngnnoc321@gmail.com"
 # email_reciever="khushbakht@cyber.net.pk"
 # email_reciever="ngn-noc@cyber.net.pk"
 # email_reciever='wajeeh.hasan322@gmail.com'
-email_reciever='nisar.ali@cyber.net.pk'
+# email_reciever='nisar.ali@cyber.net.pk'
+email_reciever='officialjunks@yahoo.com'
 t_subject="Interconnect Status Report"
 t_Cc="s.wajeeh@cyber.net.pk"
 msg=MIMEMultipart()
@@ -47,9 +48,59 @@ response = s.get('http://10.24.242.6/fusionpbx/tdm_status.php?embedded=NSC')
 
 # ============sending response to beautiful soup to navigate through===========
 soup=BeautifulSoup(response.text,"html.parser")
+
+#===========================================
+# for channel count
+red_list=[]
+inuse_list=[]
+hang_list=[]
+blue_list=[]
+# blue='background-color:#2B60DE'
+# red='background-color:#E42217'
+# hang='background-color:#95B9C7'
+# in_use='background-color:#348017'
+raw_data=soup.find_all(attrs={'align':'center','width':'10px','height':'14px'})
+for x in range(19):
+    raw_data.pop()
+
+# #=============================='d recmit============
+for item in raw_data:
+        if item['style']==red:
+            red_list.append(item)
+        elif item['style']==blue:
+            blue_list.append(item)
+        elif item['style']==hang:
+            hang_list.append(item)
+        elif item['style']==in_use:
+            inuse_list.append(item)
+        else:
+            pass
+#============================================
   
 ## errors on e1 retrieved
 raw_data_int=soup.find_all("span")
+# =======================================retrieving UP status for each e1=======
+e1_status=[]
+# ========
+send_email=False
+# ========
+#giving each e1 status as UP
+for x in raw_data_int:
+    temp_str=str(x)
+    if 'wanpipe' in temp_str:
+        temp_status=x.find('font')
+        temp_s=temp_status.get_text()
+        e1_status.append(temp_s)
+    else:
+        pass
+for x in e1_status:
+    if 'UP' in x:
+        send_email=False
+    else:
+        send_email=True
+        break
+#=======================================================
+
 
 #========================regex for string(to filer required info)=======
 LCV= re.compile(r'(\w{4} \w{4} \w{9})\s:\s(\d{1,})')
@@ -124,49 +175,6 @@ with open("interconnect_data.txt","w") as file:
         file.write("=================================")
 
 
-
-
-# for channel count
-red_list=[]
-inuse_list=[]
-hang_list=[]
-blue_list=[]
-# blue='background-color:#2B60DE'
-# red='background-color:#E42217'
-# hang='background-color:#95B9C7'
-# in_use='background-color:#348017'
-raw_data=soup.find_all(attrs={'align':'center','width':'10px','height':'14px'})
-for x in range(19):
-    raw_data.pop()
-# print(raw_data)
-# for item in raw_data:
-#     print(item['style'])
-# #=============================='d recmit============
-for item in raw_data:
-        if item['style']==red:
-            red_list.append(item)
-        elif item['style']==blue:
-            blue_list.append(item)
-        elif item['style']==hang:
-            hang_list.append(item)
-        elif item['style']==in_use:
-            inuse_list.append(item)
-        else:
-            pass
-
-e1_status=[]
-#For e1 status
-for x in raw_data_int:
-    temp_str=str(x)
-    if 'wanpipe' in temp_str:
-        temp_status=x.find('font')
-        temp_s=temp_status.get_text()
-        e1_status.append(temp_s)
-    else:
-        pass
-
-
-
 #===========================navigatig to data========================
 soup=BeautifulSoup(response.text,"html.parser")
 # print(soup)
@@ -180,8 +188,19 @@ for x in data_network_status:
 
 stp_1="Physical : {}, Data layer : {}, Network Layer : {}".format(dt_nt_list[8],dt_nt_list[9],dt_nt_list[10])
 stp_2="Physical : {}, Data layer : {}, Network Layer : {}".format(dt_nt_list[12],dt_nt_list[13],dt_nt_list[14])
+# ====================specific mesg gen=====
+hang_log=(len(red_list)+len(inuse_list)+len(hang_list)+len(blue_list))*0.2
+ulti_msg=''
+if send_email:
+    ulti_msg+="\n-->SOME E1 is down\n"
+if len(red_list)>4:
+    ulti_msg+="\n-->More than 4 channels are down<--\n"
+if len(hang_list)>hang_log:
+    ulti_msg+="\n--> 20% of channels are hang\n"
 
+# =================================
 # =================================================
+message2+=ulti_msg
 message2=""
 for count,elem in enumerate(e1_status,1):
     if count==3:
@@ -197,30 +216,34 @@ for count,elem in enumerate(e1_status,1):
         message2+="\t\tstatus : {}".format(e1_status[count-1])
         message2+="\n"
 #===starting secure connection by tls encrypter==
-server.starttls()
-server.login("ngnnoc321@gmail.com","Cyber@321")
+
 message="\nLahore Interconnect status(10.24.242.6)\n\tUp(idle) channels : {}\n\tinuse channels : {}\n\thang channels : {}\n\tdown channels : {}\n\t".format(len(blue_list),len(inuse_list),len(hang_list),len(red_list))
 message2+=message
 
 
-#=====converting dictionary data type to plain text===
-msg.attach(MIMEText(message2,'plain'))
-final_body=msg.as_string()
-#===giving file patch to be attached
-filename="interconnect_data.txt"
-#===opening file and reading byte by byte
-attachment=open(filename,'rb')
-#===converting byte's into octet stream===
-part=MIMEBase('application','octet-stream')
-#=======those stream of octet into payload====
-part.set_payload((attachment).read())
-#===email server accept data encoded with base64 default==
-encoders.encode_base64(part)
-part.add_header('Content-Disposition',"attachment; filename= "+filename)
-#====attaching txt file to actual mesage
-msg.attach(part)
-#==converting msg into string form
-final_body=msg.as_string()
-#sending email and close connection
-server.sendmail(email_sender,email_reciever,final_body)
-server.quit()
+
+
+if len(red_list)>4 or len(hang_list)>hang_log or send_email:
+    server.starttls()
+    server.login("ngnnoc321@gmail.com","Cyber@321")
+    #=====converting dictionary data type to plain text===
+    msg.attach(MIMEText(message2,'plain'))
+    final_body=msg.as_string()
+    #===giving file patch to be attached
+    filename="interconnect_data.txt"
+    #===opening file and reading byte by byte
+    attachment=open(filename,'rb')
+    #===converting byte's into octet stream===
+    part=MIMEBase('application','octet-stream')
+    #=======those stream of octet into payload====
+    part.set_payload((attachment).read())
+    #===email server accept data encoded with base64 default==
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition',"attachment; filename= "+filename)
+    #====attaching txt file to actual mesage
+    msg.attach(part)
+    #==converting msg into string form
+    final_body=msg.as_string()
+    #sending email and close connection
+    server.sendmail(email_sender,email_reciever,final_body)
+    server.quit()
