@@ -189,19 +189,31 @@ for x in data_network_status:
 stp_1="Physical : {}, Data layer : {}, Network Layer : {}".format(dt_nt_list[8],dt_nt_list[9],dt_nt_list[10])
 stp_2="Physical : {}, Data layer : {}, Network Layer : {}".format(dt_nt_list[12],dt_nt_list[13],dt_nt_list[14])
 # ====================specific mesg gen=====
-hang_log=(len(red_list)+len(inuse_list)+len(hang_list)+len(blue_list))*0.2
 ulti_msg=''
+hang_log=(len(red_list)+len(inuse_list)+len(hang_list)+len(blue_list))*0.2
+
+dt_nt_list[9]='DOWN'
+if 'UP' not in dt_nt_list[9] or 'UP' not in dt_nt_list[10]:
+    ulti_msg+='\n-->stp_1 data/network are down or flapping<--\n'
+
+if 'UP' not in dt_nt_list[13] or 'UP' not in dt_nt_list[14]:
+    ulti_msg+='\n-->stp_2 data/network are down or flapping<--\n'
+
 if send_email:
-    ulti_msg+="\n-->SOME E1 is down\n"
-if len(red_list)>4:
+    ulti_msg+="\n-->SOME E1 is down/flap\n"
+
+if len(red_list)>2:
     ulti_msg+="\n-->More than 4 channels are down<--\n"
+
 if len(hang_list)>hang_log:
     ulti_msg+="\n--> 20% of channels are hang\n"
 
+print(ulti_msg)
 # =================================
 # =================================================
+message2="\n"
 message2+=ulti_msg
-message2=""
+
 for count,elem in enumerate(e1_status,1):
     if count==3:
         message2+="============= E1#{} ================\n".format(count)
@@ -223,7 +235,7 @@ message2+=message
 
 
 
-if len(red_list)>4 or len(hang_list)>hang_log or send_email:
+if len(red_list)>2 or len(hang_list)>hang_log or send_email:
     server.starttls()
     server.login("ngnnoc321@gmail.com","Cyber@321")
     #=====converting dictionary data type to plain text===
