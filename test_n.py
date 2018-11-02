@@ -1,3 +1,4 @@
+
 #used to send get and post requests
 import requests
 #data dump navigator
@@ -15,7 +16,10 @@ from email.mime.base import MIMEBase
 from email import encoders
 #===========================account settings================
 email_sender="ngnnoc321@gmail.com"
-email_reciever="khushbakht@cyber.net.pk"
+# email_reciever="khushbakht@cyber.net.pk"
+# email_reciever="ngn-noc@cyber.net.pk"
+# email_reciever='wajeeh.hasan322@gmail.com'
+email_reciever='nisar.ali@cyber.net.pk'
 t_subject="Interconnect Status Report"
 t_Cc="s.wajeeh@cyber.net.pk"
 msg=MIMEMultipart()
@@ -134,16 +138,22 @@ blue_list=[]
 raw_data=soup.find_all(attrs={'align':'center','width':'10px','height':'14px'})
 for x in range(19):
     raw_data.pop()
-
+# print(raw_data)
+# for item in raw_data:
+#     print(item['style'])
+# #=============================='d recmit============
 for item in raw_data:
         if item['style']==red:
-            red.append(item)
+            red_list.append(item)
         elif item['style']==blue:
             blue_list.append(item)
         elif item['style']==hang:
             hang_list.append(item)
         elif item['style']==in_use:
             inuse_list.append(item)
+        else:
+            pass
+
 e1_status=[]
 #For e1 status
 for x in raw_data_int:
@@ -163,7 +173,7 @@ soup=BeautifulSoup(response.text,"html.parser")
 data_network_status=soup.find_all(attrs={'color':'white'})
 dt_nt_list=[]
 for x in data_network_status:
-    if x.get_text()=='i          ' or x.get_text()=='s          ' or x.get_text()=='u          ' or x.get_text()=='S          ' or len(x.get_text())==1:
+    if x.get_text()=='S          ' or x.get_text()=='X          ' or x.get_text()=='i          ' or x.get_text()=='D          ' or x.get_text()=='r          ' or  x.get_text()=='r          ' or x.get_text()=='d          ' or x.get_text()=='p          ' or x.get_text()=='m          ' or x.get_text()=='u          ' or x.get_text()=='t          ' or x.get_text()=='h          ' or x.get_text()=='h          ' or  x.get_text()=='c          ' or x.get_text()=='r          ' or x.get_text()=='s          ' or  x.get_text()=='C          ' or  x.get_text()=='L          ' or x.get_text()=='?          ' or len(x.get_text())==1:
         pass
     else:
         dt_nt_list.append(x.get_text())
